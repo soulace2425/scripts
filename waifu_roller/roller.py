@@ -19,14 +19,13 @@ import pyautogui as pag
 # -> typewrite("digimon-waifus\n", 0.1) -> typewrite(["escape"]) -> start rolling
 
 # startup
-LOAD_ATTEMPTS = 3  # number of attempts to keep starting app
-LOAD_WAITING = 10  # seconds to wait before continuing if starting app
+LOAD_WAITING = 5.0  # seconds to wait before continuing if starting app
 DISCORD_APP_PATH = "C:/Users/soula/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Discord Inc/Discord"
 
 # cooldowns to not look suspicious
 ACTION_COOLDOWN = 0.1  # seconds to wait between actions
 TYPING_COOLDOWN = 0.05  # seconds to wait between character input
-ROLLING_COOLDOWN = 1  # seconds to wait between waifu roll attempts
+ROLLING_COOLDOWN = 1.0  # seconds to wait between waifu roll attempts
 
 # observed coords for app components
 HOME_BUTTON_COORDS = (50, 50)
@@ -55,15 +54,7 @@ class Parser(argparse.ArgumentParser):
 
 
 def open_discord(attempts: int = 0) -> None:
-    """Attempt to focus Discord window, starting the app if necessary.
-
-    Will keep attempting to start app and maximum LOAD_ATTEMPTS times,
-    with LOAD_WAITING seconds before starting another attempt.
-    """
-    # keep trying for a Discord window until max attempts
-    if attempts >= LOAD_ATTEMPTS:
-        print(f"failed starting Discord app {LOAD_ATTEMPTS} times, aborting")
-        sys.exit(1)
+    """Attempt to focus Discord window, starting the app if necessary."""
     win_list = pag.getWindowsWithTitle("Discord")
     # Discord already open
     try:
@@ -76,7 +67,6 @@ def open_discord(attempts: int = 0) -> None:
         os.startfile(DISCORD_APP_PATH)
         print(f"starting Discord app, waiting {LOAD_WAITING} seconds")
         time.sleep(LOAD_WAITING)
-        open_discord(attempts + 1)
 
 
 def cooldown() -> None:
