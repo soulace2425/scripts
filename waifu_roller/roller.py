@@ -51,9 +51,10 @@ class Parser(argparse.ArgumentParser):
         self.add_argument("command", nargs="?", default=DEFAULT_MUDAE_COMMAND)
         self.add_argument("-c", "--channel", default=DEFAULT_TARGET_CHANNEL)
         self.add_argument("-n", "--num", type=int, default=DEFAULT_NUM_ROLLS)
+        self.add_argument("-d", "--daily", action="store_true")
 
 
-def open_discord(attempts: int = 0) -> None:
+def open_discord() -> None:
     """Attempt to focus Discord window, starting the app if necessary."""
     win_list = pag.getWindowsWithTitle("Discord")
     # Discord already open
@@ -98,13 +99,19 @@ def navigate_to_channel(channel: str) -> None:
     print(f"successfully focused text area in {channel=}")
 
 
-def start_rolling(command: str, num: int) -> None:
+def start_rolling(command: str, num: int, daily: bool) -> None:
     """Repeatedly enter the roll command into the channel."""
     print(f"starting to roll with {command=}")
     for attempt_num in range(1, num + 1):
         pag.typewrite(f"${command}\n")
         print(f"attempted to roll ({attempt_num}/{num})")
         time.sleep(ROLLING_COOLDOWN)
+
+    if (daily):
+        print(f"attempting to run daily commands")
+        pag.typewrite(f"$daily\n")
+        time.sleep(ROLLING_COOLDOWN)
+        pag.typewrite(f"$dk\n")
 
 
 def main() -> None:
@@ -114,11 +121,12 @@ def main() -> None:
     command = namespace.command
     channel = namespace.channel
     num = namespace.num
+    daily = namespace.daily
 
     # automated processes
     open_discord()
     navigate_to_channel(channel)
-    start_rolling(command, num)
+    start_rolling(command, num, daily)
 
     print("script terminated successfully")
     sys.exit(0)
