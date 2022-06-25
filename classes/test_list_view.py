@@ -25,6 +25,7 @@ class TestListView(unittest.TestCase):
         self.assertEqual(self.view.start, 1)
         self.assertEqual(self.view.stop, 8)
         self.assertEqual(self.view.step, 2)
+        self.assertEqual(self.view.address, id(self.src))
 
     def test_property_setters(self) -> None:
         self.view.start = 2
