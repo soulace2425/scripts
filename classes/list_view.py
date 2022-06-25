@@ -5,8 +5,12 @@ list_view.py
 Implements the ListView class, an attempt at implementing mutable
 sublists ("views") of the builtin list.
 
-Also implements imitations of the higher-order JavaScript methods,
-for_each, map, and filter
+Also implements imitations of the higher-order JavaScript methods:
+for_each, map, and filter.
+
+Unfortunately due to the fundamental design at the moment, these
+methods return a list, so chaining for_each, map, and filter is not
+possible at this time.
 """
 
 import copy
@@ -144,14 +148,18 @@ class ListView:
         return (self.source[i] for i in self.range)
 
     # **************************************************
-    #           BUILTIN FUNCTION DUNDERS
+    #                   TRUTHINESS
     # **************************************************
 
     def __len__(self) -> int:
-        return len(self.range())
+        return len(self.range)
 
     def __bool__(self) -> bool:
         return len(self) > 0
+
+    # **************************************************
+    #               REPRESENTATIONS
+    # **************************************************
 
     def __str__(self) -> str:
         return f"ListView({self.source[self.slice]})"
@@ -239,39 +247,9 @@ class ListView:
 
 
 def test_code() -> None:
-    """Place test code here."""
-    src = [[i] for i in range(10)]
-    view = ListView(src, 1, 8, 2)
-    for item, index in zip(view, view.range):
-        print(item, item is src[index])
-
-    print(view.slice)
-    print(view.tuple)
-
-    view[2] = "this changed!"
-    print(src)
-
-    view[2] = [5]  # restore
-
-    view.apply(list.sort, key=lambda x: x[0], reverse=True)
-    print(src)
-
-    view.for_each(lambda x: x.append(None))
-    print(src)
-
-    result = view.map(lambda x: [x[1]]*x[0])
-    print(result)
-
-    result = view.filter(lambda x: x[0] > 4)
-    print(result)
-
-    shallow_copy = list(view)
-    print(shallow_copy)
-    print(all(shallow_copy[i] is src[j] for i, j in enumerate(view.range)))
-
-    deep_copy = view.deepcopy()
-    print(deep_copy)
-    print(all(deep_copy[i] is not src[j] for i, j in enumerate(view.range)))
+    TEST_MODULE_PATH = "test_list_view.py"
+    import os
+    os.system(f"python -m unittest {TEST_MODULE_PATH}")
 
 
 if __name__ == "__main__":
