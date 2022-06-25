@@ -14,7 +14,7 @@ possible at this time.
 """
 
 import copy
-from typing import Any, Callable, Iterator, Union
+from typing import Any, Callable, Iterator, NoReturn, Union
 
 # Type Aliases
 ListIndex = Union[int, slice]
@@ -30,7 +30,7 @@ class ListView:
 
         Args:
             source (list): The list object to track.
-            start (int, optional): The start index of `source` to track.. Defaults to 0.
+            start (int, optional): The start index of `source` to track. Defaults to 0.
             stop (int, optional): The end index of `source` to track. Exclusive like in ranges and slices. Defaults to `len(source)`.
             step (int, optional): The stride of the view. Defaults to 1. If it is negative, start:stop:step works the same as in ranges and slices.
         """
@@ -131,8 +131,14 @@ class ListView:
             slice: The equivalent slice of the underlying list.
         """
         start = view_slice.start
+        if start is None:
+            start = 0
         stop = view_slice.stop
+        if stop is None:
+            stop = len(self)
         step = view_slice.step
+        if step is None:
+            step = 1
         s = slice(self.start + start * self.step,
                   self.start + stop * self.step,
                   self.step * step)
@@ -149,6 +155,18 @@ class ListView:
         """
         return self.start + view_index * self.step
 
+    def _raise_index_type_error(self, index: Any) -> NoReturn:
+        """Raise an error informing of illegal ListView indexing type.
+
+        Args:
+            index (Any): The index of inappropriate type.
+
+        Raises:
+            TypeError: Error raised.
+        """
+        raise TypeError(
+            f"{type(self).__name__} indices must be integers or slices, not {type(index).__name__!r}")
+
     # **************************************************
     #           ACCESSING AND MUTATING
     # **************************************************
@@ -157,12 +175,10 @@ class ListView:
         if isinstance(index, int):
             i = self._calc_src_index(index)
             return self.source[i]
-        elif isinstance(index, slice):
+        if isinstance(index, slice):
             s = self._calc_src_slice(index)
             return self.source[s]
-        else:
-            raise TypeError(
-                f"{type(self).__name__} indices must be integers, or slices, not {type(index).__name__!r}")
+        self._raise_index_type_error(index)
 
     def __setitem__(self, index: ListIndex, value: Any) -> None:
         if isinstance(index, int):
@@ -172,8 +188,17 @@ class ListView:
             s = self._calc_src_slice(index)
             self.source[s] = value
         else:
-            raise TypeError(
-                f"{type(self).__name__} indices must be integers, or slices, not {type(index).__name__!r}")
+            self._raise_index_type_error(index)
+
+    def __delitem__(self, index: ListIndex) -> None:
+        if isinstance(index, int):
+            i = self._calc_src_index(index)
+            del self.source[i]
+        elif isinstance(index, slice):
+            s = self._calc_src_slice(index)
+            del self.source[s]
+        else:
+            self._raise_index_type_error(index)
 
     def __iter__(self) -> Iterator:
         return (self.source[i] for i in self.range)
@@ -303,9 +328,12 @@ class ListView:
 
 
 def test_code() -> None:
+    """On-the-fly test code goes here. Move proper tests to test module."""
+    # DO NOT REMOVE
     TEST_MODULE_PATH = "test_list_view.py"
     import os
     os.system(f"python -m unittest {TEST_MODULE_PATH}")
+    # DO NOT REMOVE
 
 
 if __name__ == "__main__":

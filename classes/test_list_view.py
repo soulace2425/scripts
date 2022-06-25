@@ -74,6 +74,16 @@ class TestListView(unittest.TestCase):
         self.assertIs(self.src[3], new_sequence[0])
         self.assertIs(self.src[7], new_sequence[1])
 
+    def test_delitem(self) -> None:
+        deleted_items = self.view[2:]
+        del self.view[2:]
+        for item in deleted_items:
+            self.assertNotIn(item, self.src)
+        deleted_item = self.view[0]
+        del self.view[0]
+        self.assertNotIn(deleted_item, self.src)
+        self.assertEqual(self.src, [[i] for i in set(range(10)) - {1, 5, 7}])
+
     def test_apply(self) -> None:
         sorted_values = [self.src[i] for i in self.view.range]
         sorted_values.reverse()
