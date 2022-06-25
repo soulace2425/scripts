@@ -21,10 +21,18 @@ class TestListView(unittest.TestCase):
         self.src = [[i] for i in range(10)]
         self.view = ListView(self.src, 1, 8, 2)
 
-    def test_properties(self) -> None:
+    def test_property_getters(self) -> None:
         self.assertEqual(self.view.start, 1)
         self.assertEqual(self.view.stop, 8)
         self.assertEqual(self.view.step, 2)
+
+    def test_property_setters(self) -> None:
+        self.view.start = 2
+        self.view.stop = 6
+        self.view.step = 1
+        self.assertEqual(self.view.start, 2)
+        self.assertEqual(self.view.stop, 6)
+        self.assertEqual(self.view.step, 1)
 
     def test_converters(self) -> None:
         self.assertEqual(self.view.range, range(1, 8, 2))

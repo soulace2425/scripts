@@ -23,13 +23,32 @@ ListIndex = Union[int, slice]
 class ListView:
     """Mutable sublist of a target list."""
 
-    __slots__ = ("_source", "_start", "_step", "_stop")
+    __slots__ = ("_source", "_start", "_stop", "_step")
 
     def __init__(self, source: list, start: int = 0, stop: int = ..., step: int = 1) -> None:
+        """Construct a view of the source list specified with start:stop:step positioning.
+
+        Args:
+            source (list): The list object to track.
+            start (int, optional): The start index of `source` to track.. Defaults to 0.
+            stop (int, optional): The end index of `source` to track. Exclusive like in ranges and slices. Defaults to `len(source)`.
+            step (int, optional): The stride of the view. Defaults to 1. If it is negative, start:stop:step works the same as in ranges and slices.
+        """
+        if not isinstance(source, list):
+            raise TypeError(
+                f"source must be a list, not {type(source).__name__!r}")
+
         self._source = source
         self._start = start
-        self._step = step
         self._stop = len(source) if stop is ... else stop
+        self._step = step
+
+        for param in (self.start, self.stop, self.step):
+            if not isinstance(param, int):
+                raise TypeError(
+                    f"{type(param).__name__!r} object cannot be interpreted as an integer")
+        if step == 0:
+            raise ValueError("step cannot be zero")
 
     # **************************************************
     #                   PROPERTIES
@@ -45,15 +64,27 @@ class ListView:
         """The start index of the target list that the view tracks."""
         return self._start
 
+    @start.setter
+    def start(self, new_start: int) -> None:
+        self._start = new_start
+
     @property
     def stop(self) -> int:
         """The stop index of the target list that the view tracks."""
         return self._stop
 
+    @stop.setter
+    def stop(self, new_stop: int) -> None:
+        self._stop = new_stop
+
     @property
     def step(self) -> int:
         """The stride of the view within the target list."""
         return self._step
+
+    @step.setter
+    def step(self, new_step: int) -> None:
+        self._step = new_step
 
     @property
     def address(self) -> int:
@@ -90,7 +121,7 @@ class ListView:
     #               HELPER METHODS
     # **************************************************
 
-    def _calc_src_slice(self, view_slice: slice) -> slice:
+    def _calc_src_slice(self, view_slice: "slice") -> slice:
         """Helper function for converting a view slice to a slice for the underlying list.
 
         Args:
@@ -131,7 +162,7 @@ class ListView:
             return self.source[s]
         else:
             raise TypeError(
-                f"{self.__class__.__name__} indices must be integers, or slices, not {index.__class__.__name__}")
+                f"{type(self).__name__} indices must be integers, or slices, not {type(index).__name__!r}")
 
     def __setitem__(self, index: ListIndex, value: Any) -> None:
         if isinstance(index, int):
@@ -142,7 +173,7 @@ class ListView:
             self.source[s] = value
         else:
             raise TypeError(
-                f"{self.__class__.__name__} indices must be integers, or slices, not {index.__class__.__name__}")
+                f"{type(self).__name__} indices must be integers, or slices, not {type(index).__name__!r}")
 
     def __iter__(self) -> Iterator:
         return (self.source[i] for i in self.range)
@@ -156,6 +187,15 @@ class ListView:
 
     def __bool__(self) -> bool:
         return len(self) > 0
+
+    def __eq__(self, other: Any) -> bool:
+        try:
+            return self.source is other.source and self.range == other.range
+        except AttributeError:
+            return False
+
+    def __ne__(self, other: Any) -> bool:
+        return not self.__eq__(other)
 
     # **************************************************
     #               REPRESENTATIONS
@@ -231,18 +271,34 @@ class ListView:
         return retval
 
     def for_each(self, callback: Callable[[Any], Any]) -> None:
-        """Imitation of the Array.forEach method.
+        """Imitation of the JavaScript Array.forEach method.
 
         Args:
-            callback (Callable): Function to call with each list element as an argument.
+            callback (Callable[[Any], Any]): Function to call with each viewed element as an argument.
         """
         for item in self:
             callback(item)
 
     def map(self, callback: Callable[[Any], Any]) -> list:
+        """Imitation of the JavaScript Array.map method.
+
+        Args:
+            callback (Callable[[Any], Any]): Function to call with each viewed element as an argument.
+
+        Returns:
+            list: List of items returned from `callback`.
+        """
         return [callback(item) for item in self]
 
     def filter(self, predicate: Callable[[Any], bool]) -> list:
+        """Imitation of the JavaScript Array.filter method.
+
+        Args:
+            predicate (Callable[[Any], bool]): Function to call with each viewed element as an argument.
+
+        Returns:
+            list: List of items in the target list for which `predicate` returned `True`.
+        """
         return [item for item in self if predicate(item)]
 
 
