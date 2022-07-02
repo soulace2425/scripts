@@ -67,7 +67,7 @@ def prompt_save(spotify: Client) -> None:
     while True:
         try:
             choice = input(
-                "[Session] would you like to save this session? (y/n) ")
+                "would you like to save this session? (y/n) ")
         except KeyboardInterrupt:
             print("\n[^C] cancelled")
             return
@@ -82,15 +82,15 @@ def prompt_save(spotify: Client) -> None:
     try:
         spotify.save_session()
         print(
-            f"[Session] successfully saved session to {spotify.default_path}")
+            f"successfully saved session to {spotify.default_path}")
     except ValueError:
-        print("[Session] no default path found for client")
+        print("no default path found for client")
 
     # prompt for manual path
     while True:
         try:
             path = input(
-                "[Session] path of the file to create/overwrite (Ctrl+C to cancel): ")
+                "path of the file to create/overwrite (Ctrl+C to cancel): ")
         except KeyboardInterrupt:
             print("\n[^C] cancelled")
             return
@@ -110,7 +110,7 @@ def main_loop(spotify: Client, commands: dict[str, ParserBase]) -> None:
         spotify (Client): Authenticated Spotify client.
     """
     display_name = spotify.current_user().display_name
-    print(f"[Session] logged in as {display_name}")
+    print(f"logged in as {display_name}")
 
     try:
         while True:
@@ -119,12 +119,17 @@ def main_loop(spotify: Client, commands: dict[str, ParserBase]) -> None:
                 continue
             args = shlex.split(s)
             name = args[0]
-            parser = commands[name]
-            parser.run_command(spotify, args[1:])
+            try:
+                parser = commands[name]
+            except KeyError:
+                print(
+                    f"unknown command {name!r}; use 'list' to view all commands")
+            else:
+                parser.run_command(spotify, args[1:])
     except KeyboardInterrupt:
-        print("\n[^C]")
+        print("\n[^C] keyboard interrupt")
         prompt_save(spotify)
-        print("[Session] quitting session")
+        print("quitting session")
         sys.exit(0)
 
 

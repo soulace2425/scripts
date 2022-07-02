@@ -45,7 +45,7 @@ class ParserBase(ArgumentParser):
             aliases_str = "|" + "|".join(self.aliases)
         else:
             aliases_str = ""
-        names_with_help = f"[{self.name}{aliases_str}]\n{help}"
+        names_with_help = f"[{self.name}{aliases_str}] {self._help or ''}"
 
         kwargs.pop("prog", None)
         kwargs.pop("description", None)
@@ -90,7 +90,7 @@ class ParserBase(ArgumentParser):
         try:
             self.func(spotify, **kwargs)
         except CommandError as e:
-            print(f"[Error] {e}")
+            print(f"[Error] ({self.name}) {e}")
             return False
         return True
 
@@ -109,6 +109,11 @@ class ParserBase(ArgumentParser):
             return None
 
     def register_command(self, commands: dict[str, "ParserBase"]) -> None:
+        """Register self in the commands dict.
+
+        Args:
+            commands (dict[str, ParserBase]): Mapping to update.
+        """
         commands[self.name] = self
         for name in self.aliases:
             commands[name] = self
