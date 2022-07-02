@@ -9,6 +9,7 @@ Script for automating common actions in Spotify using tekore API wrapper.
 
 import importlib
 import os
+import shlex
 import sys
 
 import tekore as tk
@@ -47,6 +48,8 @@ def register_commands() -> dict[str, ParserBase]:
     """
     commands = {}
     for file_name in os.listdir(COMMANDS_PATH):
+        if not file_name.endswith(".py"):
+            continue
         module_name = file_name.removesuffix(".py")
         dot_path = COMMANDS_PATH.replace("/", ".") + module_name
         module = importlib.import_module(dot_path)
@@ -112,6 +115,12 @@ def main_loop(spotify: Client, commands: dict[str, ParserBase]) -> None:
     try:
         while True:
             s = input(f"{display_name}> ")
+            if s == "" or s.isspace():
+                continue
+            args = shlex.split(s)
+            name = args[0]
+            parser = commands[name]
+            parser.run_command(spotify, args[1:])
     except KeyboardInterrupt:
         print("\n[^C]")
         prompt_save(spotify)
