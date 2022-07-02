@@ -56,7 +56,7 @@ def _get_track_id(spotify: Client, query: str, first: bool) -> str:
 def _get_playlist_id(spotify: Client, query: str, first: bool) -> str:
     result = spotify.search(query, types=("playlist",))
     if first:
-        first_page = tk.model.SimplePlaylistPaging = result[0]
+        first_page: tk.model.SimplePlaylistPaging = result[0]
         first_playlist = first_page.items[0]
         return first_playlist.id
     _display_results(result)
@@ -101,13 +101,13 @@ def save(spotify: Client,
 
     # resolve track ID from: track query > current pb track > fail
     if track is not None:
-        _get_track_id(spotify, track, first)
+        track = _get_track_id(spotify, track, first)
     else:
         track = _pb_track_id(pb) or _raise_no_track()
 
     # resolve playlist ID from: playlist query > current pb playlist > (use Liked Songs)
     if playlist is not None:
-        _get_playlist_id(spotify, playlist, first)
+        playlist = _get_playlist_id(spotify, playlist, first)
     else:
         playlist = _pb_playlist_id(pb) or ...  # flag to use Liked Songs
 
