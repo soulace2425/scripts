@@ -7,6 +7,7 @@ test.py
 Testing script. Not part of final product.
 """
 
+import pickle
 from typing import Any, Callable, Iterable
 
 import tekore as tk
@@ -36,16 +37,8 @@ def find(predicate: Callable[[Any], Any], iterable: Iterable) -> Any:
 
 ##### TESTS #####
 
-# results = spotify.search("coding mix", types=("playlist",))
-# result: tk.model.SimplePlaylistPaging = results[0]
-# coding_mix = find(lambda item: item.owner.display_name ==
-#                   "Vincent Lin", result.items)
-# print(coding_mix)
-
-pb = spotify.playback()
-print(pb.context)
-_, pl_id = tk.from_uri(pb.context.uri)
-print(_, pl_id)
-
-pl = spotify.playlist(pl_id, fields="name,description,tracks.items.track.name")
-# print(pl)
+user = spotify.current_user()
+result = spotify.search("dsagfshadsgkahslgash", types=("track",))
+model_list = result[0].items
+for item in model_list:
+    print(item)

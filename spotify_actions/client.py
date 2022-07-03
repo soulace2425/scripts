@@ -22,6 +22,7 @@ class Client(tk.Spotify):
         super().__init__(*args, **kwargs)
         self._session = {}
         self._default_path = ""
+        self._human = self.current_user()
 
     @property
     def session(self) -> dict[str, Any]:
@@ -32,6 +33,11 @@ class Client(tk.Spotify):
     def default_path(self) -> str:
         """Default read/write path for pickling client session."""
         return self._default_path
+
+    @property
+    def human(self) -> tk.model.PrivateUser:
+        """The user account the client is logged in as."""
+        return self._human
 
     @default_path.setter
     def default_path(self, new_path: str) -> None:

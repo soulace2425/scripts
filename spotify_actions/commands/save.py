@@ -10,6 +10,7 @@ from typing import Any, Callable, NoReturn, Optional, Union
 import tekore as tk
 from base import Client, ParserBase
 from exceptions import CommandError
+from tabulate import tabulate
 
 meta = {
     "name": "save",
@@ -37,31 +38,117 @@ def _raise_no_track() -> NoReturn:
         "no track specified and no track detected in current playback")
 
 
-def _display_results(result: tuple[tk.model.Paging, ...]) -> None:
-    print("<display results>")  # todo
+def _raise_no_playlist() -> NoReturn:
+    raise CommandError(
+        "the specified playlist could not be found or does not belong to you")
 
 
-def _get_track_id(spotify: Client, query: str, first: bool) -> str:
+def _display_track_results(result: tuple[tk.model.FullTrackPaging, ...]) -> list[tk.model.FullTrack]:
+    track_list = result[0].items
+    entries = [None] * len(track_list)
+    if len(entries) == 0:
+        print("no results returned")
+        return []
+    for index, track in enumerate(track_list, start=1):
+        entry = [index, track.name, ", ".join(a.name for a in track.artists)]
+        entries[index-1] = entry
+    table = tabulate(entries, headers=("Index", "Track Name",
+                     "Artist Names"), tablefmt="github")
+    print(table)
+    return track_list
+
+
+def _prompt_track_choice(track_list: list[tk.model.FullTrack]) -> tk.model.FullTrack:
+    max_index = len(track_list)
+    while True:
+        choice = input(
+            f"enter index of the track you mean to choose (1-{max_index}): ")
+        try:
+            chosen_index = int(choice)
+            if chosen_index not in range(1, max_index+1):
+                raise IndexError
+        except ValueError:
+            print("invalid input! please enter a valid index number")
+            continue
+        except IndexError:
+            print(f"index out of range! please enter a valid index")
+            continue
+        else:
+            chosen_track = track_list[chosen_index-1]
+            print(chosen_track.name)
+            return chosen_track
+
+
+def _display_playlist_results(result: tuple[tk.model.SimplePlaylistPaging, ...],
+                              spotify: Client) -> list[tk.model.SimplePlaylist]:
+    # filter by playlists that belong to the user
+    playlist_list = [
+        pl for pl in result[0].items if pl.owner.id == spotify.human.id]
+    entries = [None] * len(playlist_list)
+    if len(entries) == 0:
+        print("no results returned")
+        return []
+    for index, playlist in enumerate(playlist_list, start=1):
+        shortened = playlist.description[:27]
+        if shortened != playlist.description:
+            shortened += "..."
+        entry = [index, playlist.name, shortened]
+        entries[index-1] = entry
+    table = tabulate(entries, headers=("Index", "Playlist Name",
+                     "Description"), tablefmt="github")
+    print(table)
+    return playlist_list
+
+
+def _prompt_playlist_choice(playlist_list: list[tk.model.SimplePlaylist]) -> tk.model.SimplePlaylist:
+    max_index = len(playlist_list)
+    while True:
+        choice = input(
+            f"enter index of the track you mean to choose (1-{max_index}): ")
+        try:
+            chosen_index = int(choice)
+            if chosen_index not in range(1, max_index+1):
+                raise IndexError
+        except ValueError:
+            print("invalid input! please enter a valid index number")
+            continue
+        except IndexError:
+            print(f"index out of range! please enter a valid index")
+            continue
+        else:
+            chosen_playlist = playlist_list[chosen_index-1]
+            print(chosen_playlist.name)
+            return chosen_playlist
+
+
+def _get_track_id(spotify: Client, query: str, first: bool) -> Optional[str]:
     result = spotify.search(
         query, types=("track",))
     if first:
         first_page: tk.model.FullTrackPaging = result[0]
         first_track = first_page.items[0]
         return first_track.id
-    _display_results(result)
-    print("<prompt user input>")  # todo
-    return "7tzPzs6GUueoIaZHBgN1rG"  # todo (孤单北半球)
+    track_list = _display_track_results(result)
+    if len(track_list) == 0:
+        return None
+    chosen_track = _prompt_track_choice(track_list)
+    return chosen_track.id
 
 
-def _get_playlist_id(spotify: Client, query: str, first: bool) -> str:
+def _get_playlist_id(spotify: Client, query: str, first: bool) -> Optional[str]:
     result = spotify.search(query, types=("playlist",))
     if first:
         first_page: tk.model.SimplePlaylistPaging = result[0]
-        first_playlist = first_page.items[0]
-        return first_playlist.id
-    _display_results(result)
-    print("<prompt user input>")  # todo
-    return "5FpuSaX0kDeItlPMIIYBZS"  # todo (coding mix)
+        # find first playlist that belongs to user
+        for playlist in first_page.items:
+            if playlist.owner.id == spotify.human.id:
+                return playlist.id
+        return None
+    playlist_list = _display_playlist_results(result, spotify)
+    if len(playlist_list) == 0:
+        return None
+    chosen_playlist = _prompt_playlist_choice(playlist_list)
+    return chosen_playlist.id
 
 
 def _pb_track_id(pb: Optional[tk.model.CurrentlyPlayingContext]) -> Optional[str]:
@@ -95,23 +182,31 @@ def save(spotify: Client,
         like (bool): Flag for adding the track to Liked Songs in addition to chosen playlist (does nothing if playlist already resolves to Liked Songs).
 
     Raises:
-        CommandError: No track specified and no track detected in current playback.
+        CommandError: No track specified and no track detected in current playback. Or, no playlist found if specified.
     """
     pb = spotify.playback()
 
     # resolve track ID from: track query > current pb track > fail
     if track is not None:
-        track = _get_track_id(spotify, track, first)
+        track = _get_track_id(spotify, track, first) or _raise_no_track()
     else:
         track = _pb_track_id(pb) or _raise_no_track()
 
     # resolve playlist ID from: playlist query > current pb playlist > (use Liked Songs)
     if playlist is not None:
-        playlist = _get_playlist_id(spotify, playlist, first)
+        playlist = _get_playlist_id(
+            spotify, playlist, first) or _raise_no_playlist()
     else:
         playlist = _pb_playlist_id(pb) or ...  # flag to use Liked Songs
 
-    print(track, playlist)
+    if playlist == ... or like:
+        spotify.saved_tracks_add([track])
+        print(f"added {tk.to_url('track', track)} to Liked Songs")
+        if playlist == ...:
+            return  # no further action
+    spotify.playlist_add(playlist, [tk.to_uri("track", track)])
+    print(
+        f"added {tk.to_url('track', track)} to {tk.to_url('playlist', playlist)}")
 
 
 def register_command(commands: dict[str, ParserBase]) -> None:
