@@ -14,13 +14,15 @@ from datetime import date
 
 from dotenv import load_dotenv
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import WebDriverException
+# from selenium.webdriver.common.by import By
+# from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.edge.options import Options
 from selenium.webdriver.edge.service import Service
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.support.ui import WebDriverWait
+
+# from selenium.webdriver.remote.webelement import WebElement
+# from selenium.webdriver.support import expected_conditions
+# from selenium.webdriver.support.ui import WebDriverWait
 
 """
 # waiting boilerplate:
@@ -30,6 +32,10 @@ element = WebDriverWait(driver, 10).until(
 """
 
 DRIVER_PATH = "C:/Users/soula/AppData/Local/Programs/Python/Python310/Scripts/MicrosoftWebDriver.exe"
+
+# this is a thing you can do apparently
+# and then: options.add_argument(f"user-data-dir={USER_DATA_PATH}")
+# USER_DATA_PATH = "C:/Users/soula/AppData/Local/Microsoft/Edge/User Data/"
 
 WAIT_TIMEOUT = 5.0  # seconds
 INSTAGRAM_URL = "https://www.instagram.com/direct/inbox/"
@@ -59,36 +65,26 @@ def login(driver: webdriver.Edge) -> None:
 
 
 def navigate_to_profile(driver: webdriver.Edge) -> None:
-    avatar_elem = driver.find_element("xpath",
-                                      "//*[@id=\"react-root\"]/section/nav/div[2]/div/div/div[3]/div/div[6]/div[1]/span/img")
-    avatar_elem.click()
+    try:
+        avatar_elem = driver.find_element("xpath",
+                                          "//*[@id=\"react-root\"]/section/nav/div[2]/div/div/div[3]/div/div[6]/div[1]/span/img")
+        avatar_elem.click()
 
-    # full xpath needed since xpath had a variable part
-    profile_elem = driver.find_element("xpath",
-                                       "/html/body/div[1]/section/nav/div[2]/div/div/div[3]/div/div[6]/div[2]/div[2]/div[2]/a[1]/div/div[2]/div/div/div/div")
-    profile_elem.click()
+        # full xpath needed since xpath had a variable part
+        profile_elem = driver.find_element("xpath",
+                                           "/html/body/div[1]/section/nav/div[2]/div/div/div[3]/div/div[6]/div[2]/div[2]/div[2]/a[1]/div/div[2]/div/div/div/div")
+        profile_elem.click()
+    # idfk why this happens
+    except WebDriverException as e:
+        print(f"{type(e).__name__}: {e}")
 
-    # get rid of stupid popup blocking detection of edit button
-    # popup_elem = driver.find_element("xpath",
-    #     "/div/div/div/div[2]/div")
-    # popup_elem.click()
+    # edit button class:
+    # "oajrlxb2 g5ia77u1 qu0x051f esr5mh6w e9989ue4 r7d6kgcz rq0escxv nhd2j8a9 nc684nl6 p7hjln8o kvgmc6g5 cxmmr5t8 oygrvhab hcukyx3x jb3vyjys rz4wbd8a qt6c0cv9 a8nywdso i1ao9s8h esuyzwwr f1sip0of lzcic4wl _acan _acap _acat _acaw _a6hd"
+    # edit button full xpath:
+    # "/html/body/div[1]/div/div[1]/div/div[1]/div/div/div[1]/div[1]/section/main/div/header/section/div[2]/div/a"
 
-    # full xpath needed since xpath had a variable part
-    waiter = WebDriverWait(driver, 10)
-    callback = expected_conditions.presence_of_element_located(
-        (By.XPATH,
-         "/html/body/div[1]/div/div[1]/div/div[1]/div/div/div[1]/div[1]/section/main/div/header/section/div[2]/div/a")
-    )
-    edit_button: WebElement = waiter.until(
-        callback, "could not detect edit profile button")
-
-    # /html/body/div[1]/div/div[1]/div/div[1]/div/div/div/div[1]/div[1]/section/main/div/header/section/div[2]/div/a
-
-    # edit_button = driver.find_element("xpath",
-    #     "/html/body/div[1]/div/div[1]/div/div[1]/div/div/div[1]/div[1]/section/main/div/header/section/div[2]/div/a")
-    edit_button.click()
-    edit_button.click()
-    print("navigating to the edit profile page")
+    # fuck it, directly using the href lmao
+    driver.get("https://www.instagram.com/accounts/edit/")
 
 
 # copy-pasted from coding_mix/coding_mix.pyw
@@ -107,7 +103,7 @@ def update_profile(driver: webdriver.Edge) -> None:
     print(f"typed {new_bio=}")
 
     submit_button = driver.find_element("xpath",
-                                        "//*[@id=\"react-root\"]/section/main/div/article/form/div[10]/div/div")
+                                        "/html/body/div[1]/div/div[1]/div/div[1]/div/div/div/div[1]/div[1]/section/main/div/article/form/div[10]/div/div/button")
     submit_button.click()
     print("submitted profile change")
 
