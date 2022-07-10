@@ -18,6 +18,10 @@ import pyautogui as pag
 # open discord window -> click home -> click find or start a conversation
 # -> typewrite("digimon-waifus\n", 0.1) -> typewrite(["escape"]) -> start rolling
 
+# finally got the keyboard shortcut lmao:
+# open discord window -> Ctrl+T
+# -> typewrite("digimon-waifus\n", 0.1) -> typewrite(["escape"]) -> start rolling
+
 # startup
 LOAD_WAITING = 5.0  # seconds to wait before continuing if starting app
 DISCORD_APP_PATH = "C:/Users/soula/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Discord Inc/Discord"
@@ -77,15 +81,9 @@ def cooldown() -> None:
 
 def navigate_to_channel(channel: str) -> None:
     """Navigate to the target channel within Discord to roll in."""
-    # click home button
+    # bring up global search
     cooldown()
-    x, y = HOME_BUTTON_COORDS
-    pag.click(x=x, y=y)
-
-    # click search bar
-    cooldown()
-    x, y = SEARCH_BAR_COORDS
-    pag.click(x=x, y=y)
+    pag.hotkey("ctrl", "t")
 
     # type channel name
     cooldown()
