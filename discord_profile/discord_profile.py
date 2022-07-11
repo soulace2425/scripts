@@ -17,6 +17,7 @@ from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.edge.options import Options
 from selenium.webdriver.edge.service import Service
+from selenium.webdriver.remote.webelement import WebElement
 
 DRIVER_PATH = "C:/Users/soula/AppData/Local/Programs/Python/Python310/Scripts/MicrosoftWebDriver.exe"
 
@@ -31,7 +32,7 @@ XPATH_LOGIN_BUTTON = "/html/body/div[1]/div/div/div[1]/div[1]/header[1]/nav/div/
 XPATH_EMAIL_INPUT = "/html/body/div[1]/div[2]/div/div[1]/div/div/div/div/form/div/div/div[1]/div[2]/div[1]/div/div[2]/input"
 XPATH_PASSWORD_INPUT = "/html/body/div[1]/div[2]/div/div[1]/div/div/div/div/form/div/div/div[1]/div[2]/div[2]/div/input"
 XPATH_AVATAR_ICON = "/html/body/div[1]/div[2]/div/div[1]/div/div[2]/div/div[1]/div/div[2]/div[1]/section/div[2]/div[1]/div"
-XPATH_CUSTOM_STATUS = "/html/body/div[1]/div[2]/div/div[3]/div/div/div/div/div[7]/div/div/span"
+XPATH_CUSTOM_STATUS = "/html/body/div[1]/div[2]/div/div[3]/div/div/div/div/div[7]/div"
 XPATH_STATUS_INPUT = "/html/body/div[1]/div[2]/div/div[3]/div[2]/div/div/div[2]/div[1]/div[2]/div/div[2]/input"
 
 
@@ -42,6 +43,19 @@ class Parser(argparse.ArgumentParser):
                           help="run the driver headlessly (no window popup)")
         self.add_argument("status", nargs="*", default=None,
                           help="custom status if not using HSSEAS counter")
+
+
+def setup(headless: bool) -> webdriver.Edge:
+    service = Service(DRIVER_PATH)
+    options = Options()
+
+    # run without browser popup
+    if headless:
+        options.headless = True
+
+    # remember to update Edge browser itself to match driver version
+    # msedgedriver.exe needs to be in PATH but it keeps not detecting
+    return webdriver.Edge(service=service, options=options)
 
 
 def login(driver: webdriver.Edge) -> None:
@@ -59,7 +73,7 @@ def login(driver: webdriver.Edge) -> None:
     print("successfully inputted credentials")
 
 
-def update_status(driver: webdriver.Edge, status: str = None) -> None:
+def find_status_input(driver: webdriver.Edge) -> WebElement:
     avatar_icon = driver.find_element("xpath",
                                       XPATH_AVATAR_ICON)
     avatar_icon.click()
@@ -70,7 +84,10 @@ def update_status(driver: webdriver.Edge, status: str = None) -> None:
 
     status_input = driver.find_element("xpath",
                                        XPATH_STATUS_INPUT)
+    return status_input
 
+
+def update_status(status_input: WebElement, status: str = None) -> None:
     # use HSSEAS counter as default status
     status = status or HSSEAS_TEMPLATE.format(day_number())
     status_input.clear()
@@ -88,23 +105,15 @@ def main() -> None:
     """Main driver function."""
     ns = Parser().parse_args(sys.argv[1:])
 
-    service = Service(DRIVER_PATH)
-    options = Options()
+    driver = setup(ns.headless)
 
-    # run without browser popup
-    if ns.headless:
-        options.add_argument("headless")
-
-    # remember to update Edge browser itself to match driver version
-    # msedgedriver.exe needs to be in PATH but it keeps not detecting
-    driver: webdriver.Edge = webdriver.Edge(service=service, options=options)
     driver.get(DISCORD_URL)
-
     # wait for page to load
     driver.implicitly_wait(WAIT_TIMEOUT)
 
     login(driver)
-    update_status(driver, " ".join(ns.status))
+    status_input = find_status_input(driver)
+    update_status(status_input, " ".join(ns.status))
 
     print("successfully executed process")
     driver.quit()
