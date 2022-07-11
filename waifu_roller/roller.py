@@ -32,8 +32,7 @@ TYPING_COOLDOWN = 0.05  # seconds to wait between character input
 ROLLING_COOLDOWN = 1.0  # seconds to wait between waifu roll attempts
 
 # observed coords for app components
-HOME_BUTTON_COORDS = (50, 50)
-SEARCH_BAR_COORDS = (200, 50)
+CLAIM_COORD = (500, 885)
 
 # defaults
 DEFAULT_MUDAE_COMMAND = "wa"  # omit $ prefix cuz that messes up shell
@@ -99,6 +98,9 @@ def navigate_to_channel(channel: str) -> None:
 
 def start_rolling(command: str, num: int, daily: bool) -> None:
     """Repeatedly enter the roll command into the channel."""
+    # move cursor to where the heart emoji shows up
+    pag.moveTo(*CLAIM_COORD)
+
     print(f"starting to roll with {command=}")
     for attempt_num in range(1, num + 1):
         pag.typewrite(f"${command}\n")
