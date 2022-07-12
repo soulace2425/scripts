@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 
 CLI_PROMPT = f"{Fore.GREEN}(Spotify) {Fore.RESET}"
 EXIT_WORDS = ("q", "quit", "exit")
+CLEAR_WORDS = ("cls", "clear")
 HELP_MESSAGE = f"Spotify CLI! Use one of {EXIT_WORDS} or ^C to exit. Use 'list' to view list of commands."
 
 
@@ -75,7 +76,7 @@ def main_loop(spotify: tk.Spotify, commands: dict[str, Parser]) -> None:
                 continue
             name, *args = shlex.split(line)
             name = name.lower()
-            # check help, list, and exit words before commands
+            # check special exit words before commands
             # this means any commands named/aliased with such words
             # will become masked in the main_loop
             if name == "help":
@@ -83,6 +84,9 @@ def main_loop(spotify: tk.Spotify, commands: dict[str, Parser]) -> None:
                 continue
             if name == "list":
                 list_commands(commands)
+                continue
+            if name in CLEAR_WORDS:
+                os.system("cls")
                 continue
             if name in EXIT_WORDS:
                 raise KeyboardInterrupt
