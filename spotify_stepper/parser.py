@@ -6,9 +6,11 @@ Code appropriated from spotify_actions/base.py
 """
 
 from argparse import ArgumentParser, Namespace
-from typing import Callable, Iterable, Optional, Sequence
+from typing import Callable, Iterable, NoReturn, Optional, Sequence
 
 import tekore as tk
+
+from exceptions import CommandError, CommandNotFound
 
 
 class Parser(ArgumentParser):
@@ -110,3 +112,15 @@ class Parser(ArgumentParser):
         commands[self.name] = self
         for name in self.aliases:
             commands[name] = self
+
+
+def _raise_command_error(spotify: tk.Spotify) -> NoReturn:
+    raise CommandNotFound
+
+
+NULL_PARSER = Parser(_raise_command_error)
+"""Special singleton that represents no command.
+
+Its only purpose is to raise CommandNotFound to be caught in
+main.main_loop when run_command is attempted on it.
+"""

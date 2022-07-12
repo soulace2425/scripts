@@ -10,12 +10,14 @@ CLI for stepping through every song in Liked Songs.
 import importlib
 import os
 import shlex
-from parser import Parser
+from parser import NULL_PARSER, Parser
 
 import colorama
 import tekore as tk
 from colorama import Back, Fore, Style
 from dotenv import load_dotenv
+
+from exceptions import CommandError, CommandNotFound
 
 CLI_PROMPT = f"{Fore.GREEN}(Spotify) {Fore.RESET}"
 EXIT_WORDS = ("q", "quit", "exit")
@@ -69,36 +71,45 @@ def list_commands(commands: dict[str, Parser]) -> None:
 def main_loop(spotify: tk.Spotify, commands: dict[str, Parser]) -> None:
     user = spotify.current_user()
     print(f"Welcome, {user.display_name}!")
-    try:
-        while True:
-            line = input(CLI_PROMPT)
-            if line == "" or line.isspace():
-                continue
-            name, *args = shlex.split(line)
-            name = name.lower()
-            # check special exit words before commands
-            # this means any commands named/aliased with such words
-            # will become masked in the main_loop
-            if name == "help":
-                print(HELP_MESSAGE)
-                continue
-            if name == "list":
-                list_commands(commands)
-                continue
-            if name in CLEAR_WORDS:
-                os.system("cls")
-                continue
-            if name in EXIT_WORDS:
-                raise KeyboardInterrupt
-            try:
-                command = commands[name]
-                command.run_command(spotify, args)
-            except KeyError:
-                print(f"{Fore.RED}Command {name!r} not found")
-            print(f"{line=}")
-    # todo: handle command-specific errors
-    except Exception as e:
-        print(f"{type(e).__name__}: {e}")
+
+    while True:
+        # get and split input
+        line = input(CLI_PROMPT)
+        if line == "" or line.isspace():
+            continue
+        name, *args = shlex.split(line)
+        name = name.lower()
+
+        # check special exit words before commands
+        # this means any commands named/aliased with such words
+        # will become masked in the main_loop
+        if name == "help":
+            print(HELP_MESSAGE)
+            continue
+        if name == "list":
+            list_commands(commands)
+            continue
+        if name in CLEAR_WORDS:
+            os.system("cls")
+            continue
+        if name in EXIT_WORDS:
+            raise KeyboardInterrupt
+
+        # retrieve and run parser
+        try:
+            command = commands.get(name, NULL_PARSER)
+            command.run_command(spotify, args)
+        # command was NULL_PARSER
+        except CommandNotFound:
+            print(f"{Fore.RED}Command {name!r} not found")
+        # some expected error occurred
+        except CommandError as e:
+            print(e)
+        # some unexpected Python error occurred
+        except Exception as e:
+            print(f"{type(e).__name__}: {e}")
+
+        print(f"{line=}")  # debug
 
 
 def main() -> None:
