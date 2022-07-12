@@ -22,9 +22,17 @@ Track = tk.model.SavedTrack | tk.model.PlaylistTrack
 TrackGenerator = Generator[Track, None, None]
 """Type alias for return type of spotify.all_items."""
 
+# for-each actions
 ACTION_SKIP = "Skip"
 ACTION_VIEW = "View information"
 ACTION_ADD = "Add to preset"
+
+# preset playlists (by ID)
+# todo: make this programmatic
+PRESET_CN = "1RPJbcJJAr5NbJXok00kSf"
+PRESET_JP = "4GknCaIa62xLeEq1MxGPAe"
+PRESET_KR = "4AApsy06U5xbZB1IFlKom0"
+PRESET_SP = "27e31bddkFpy0p100DDtYt"
 
 ###############################
 ### CALLBACK IMPLEMENTATION ###
@@ -160,19 +168,60 @@ def _view_track(track: Track) -> None:
     print()
 
 
-def _add_to_playlist(spotify: tk.Spotify, track: Track) -> None:
-    pass
+def _prompt_preset() -> list[str]:
+    question = {
+        "type": "checkbox",
+        "name": "presets",
+        "message": "Which preset(s) to add to?",
+        "choices": [
+            {
+                "name": "CN",
+                "value": PRESET_CN
+            },
+            {
+                "name": "JP",
+                "value": PRESET_JP
+            },
+            {
+                "name": "KR",
+                "value": PRESET_KR
+            },
+            {
+                "name": "SP",
+                "value": PRESET_SP
+            }
+        ]
+    }
+    answers = PyInquirer.prompt((question,))
+    try:
+        presets = answers["presets"]
+    # answers == {} if canceled during prompt
+    except KeyError:
+        raise KeyboardInterrupt from None
+    return presets
+
+
+def _add_to_preset(spotify: tk.Spotify, track: Track) -> None:
+    presets = _prompt_preset()
+    playlist_names = []
+    for preset_id in presets:
+        spotify.playlist_add(preset_id, (track.track.uri,))
+        playlist = spotify.playlist(preset_id, "name")
+        playlist_name = util.color(playlist["name"], "cyan")
+        playlist_names.append(playlist_name)
+    track_name = util.color(track.track.name, "blue")
+    print(f"Added {track_name} to {', '.join(playlist_names)}")
 
 
 def _execute_action(spotify: tk.Spotify, choice: str, track: Track) -> None:
     if choice == ACTION_VIEW:
         _view_track(track)
-        # don't continue stepping yet
-        # print()
-        # choice = _prompt_action()
-        # _execute_action(spotify, choice, track)
+        # recurse: don't continue stepping yet
+        print()
+        choice = _prompt_action()
+        _execute_action(spotify, choice, track)
     elif choice == ACTION_ADD:
-        _add_to_playlist(spotify, track)
+        _add_to_preset(spotify, track)
 
 
 def step(spotify: tk.Spotify, playlist: list[str]) -> None:
