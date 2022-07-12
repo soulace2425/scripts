@@ -10,6 +10,7 @@ from typing import Callable
 
 import tekore as tk
 from colorama import Back, Fore, Style
+from exceptions import CommandError
 from tabulate import tabulate
 
 meta = {
@@ -41,9 +42,8 @@ def step(spotify: tk.Spotify, playlist: list[str]) -> None:
         query = " ".join(playlist)
         pl = _get_playlist_from_query(spotify, query)
         if pl is None:
-            print(
-                f"{Fore.RED}Could not find any of your playlists with query {query!r}")
-            return
+            raise CommandError(
+                f"Could not find any of your playlists with query {query!r}")
         playlist_name = pl.name
         # SimplePlaylist -> FullPlaylist
         paging = spotify.playlist(pl.id).tracks

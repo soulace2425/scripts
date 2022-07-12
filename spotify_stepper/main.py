@@ -10,6 +10,7 @@ CLI for stepping through every song in Liked Songs.
 import importlib
 import os
 import shlex
+import subprocess
 from parser import NULL_PARSER, Parser
 
 import colorama
@@ -70,7 +71,8 @@ def list_commands(commands: dict[str, Parser]) -> None:
 
 def main_loop(spotify: tk.Spotify, commands: dict[str, Parser]) -> None:
     user = spotify.current_user()
-    print(f"Welcome, {user.display_name}!")
+    os.system("cls")
+    print(f"{Fore.GREEN}Welcome, {user.display_name}!")
 
     while True:
         # get and split input
@@ -94,6 +96,12 @@ def main_loop(spotify: tk.Spotify, commands: dict[str, Parser]) -> None:
             continue
         if name in EXIT_WORDS:
             raise KeyboardInterrupt
+        if name == "python":
+            print(f"{Fore.RED}Started a Python subprocess:")
+            py = subprocess.Popen("python -q")
+            retcode = py.wait()
+            print(f"{Fore.RED}Python subprocess exited with code {hex(retcode)}.")
+            continue
 
         # retrieve and run parser
         try:
@@ -104,10 +112,13 @@ def main_loop(spotify: tk.Spotify, commands: dict[str, Parser]) -> None:
             print(f"{Fore.RED}Command {name!r} not found")
         # some expected error occurred
         except CommandError as e:
-            print(e)
+            print(f"{Fore.RED}{e}")
         # some unexpected Python error occurred
         except Exception as e:
-            print(f"{type(e).__name__}: {e}")
+            print(f"{Back.RED}An unexpected Python error occurred:")
+            print(f"{Fore.RED}{type(e).__name__}: {e}")
+            print(
+                f"{Fore.RED}{Style.BRIGHT}Aborting further action for command {name!r}, resuming program.")
 
         print(f"{line=}")  # debug
 
@@ -120,9 +131,13 @@ def main() -> None:
         spotify = login_to_spotify()
         commands = register_commands()
         main_loop(spotify, commands)
-    # gracefully exit (catches KeyboardInterrupt)
-    except:
-        print(f"{Fore.RED}Aborted!")
+    # gracefully exit
+    except KeyboardInterrupt:
+        print(f"{Fore.RED}Quitting program!")
+    except Exception as e:
+        print(f"{Back.RED}An unexpected Python error occurred:")
+        print(f"{Fore.RED}{type(e).__name__}: {e}")
+        print(f"{Fore.RED}{Style.BRIGHT}Aborting program.")
     finally:
         colorama.deinit()
 
