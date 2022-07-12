@@ -92,7 +92,7 @@ class Parser(ArgumentParser):
         # intercept to not quit the entire program
         # CommandErrors and Exceptions still propagated up
         except KeyboardInterrupt:
-            util.printred("Aborted command")
+            util.printred("Aborted command.")
             return False
         return True
 

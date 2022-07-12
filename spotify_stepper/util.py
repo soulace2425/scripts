@@ -10,7 +10,7 @@ from colorama import Back, Fore, Style
 
 
 def printred(message: str, intensity: int = 1) -> None:
-    """Print message in red text.
+    """Print message in red.
 
     Intensity options:
         - 0 or lower: uncolored, unstyled text

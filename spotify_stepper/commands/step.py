@@ -10,12 +10,28 @@ from typing import Generator
 import PyInquirer
 import tekore as tk
 import util
-from colorama import Back, Fore, Style
 from exceptions import CommandError
+
+#################
+### CONSTANTS ###
+#################
+
+Track = tk.model.SavedTrack | tk.model.PlaylistTrack
+"""Type alias for types of tracks that command can deal with."""
+
+TrackGenerator = Generator[Track, None, None]
+"""Type alias for return type of spotify.all_items."""
+
+ACTION_SKIP = "Skip"
+ACTION_VIEW = "View information"
+ACTION_ADD = "Add to preset"
 
 ###############################
 ### CALLBACK IMPLEMENTATION ###
 ###############################
+
+# temp fix: to be initialized upon first step command
+user_playlists = []
 
 
 def _get_playlist_from_query(spotify: tk.Spotify, query: str) -> tk.model.SimplePlaylist:
@@ -41,11 +57,6 @@ def _get_playlist_from_query(spotify: tk.Spotify, query: str) -> tk.model.Simple
     return playlists[matches[0]]
 
 
-TrackGenerator = Generator[tk.model.SavedTrack |
-                           tk.model.PlaylistTrack, None, None]
-"""Type alias for return type of spotify.all_items."""
-
-
 def _get_tracks(spotify: tk.Spotify, playlist: list[str]) -> tuple[str, TrackGenerator, int, bool]:
     """Resolve playlist from command line arg playlist.
 
@@ -69,8 +80,7 @@ def _get_tracks(spotify: tk.Spotify, playlist: list[str]) -> tuple[str, TrackGen
         query = " ".join(playlist)
         pl = _get_playlist_from_query(spotify, query)
         playlist_name = pl.name
-        # SimplePlaylist -> FullPlaylist
-        paging = spotify.playlist(pl.id).tracks
+        paging = spotify.playlist_items(pl.id)
         using_liked = False
     all_tracks = spotify.all_items(paging)
     num_tracks = paging.total
@@ -86,7 +96,7 @@ def _confirm_playlist(playlist_name: str) -> bool:
     Returns:
         bool: Whether user answered yes.
     """
-    print(f"Stepping through playlist {Fore.CYAN}{playlist_name}{Fore.RESET}.")
+    print(f"Stepping through playlist {util.color(playlist_name, 'cyan')}.")
     question = {
         "type": "confirm",
         "name": "wanted",
@@ -95,6 +105,74 @@ def _confirm_playlist(playlist_name: str) -> bool:
     }
     answers = PyInquirer.prompt((question,))
     return answers["wanted"]
+
+
+def _prompt_action() -> str:
+    question = {
+        "type": "expand",
+        "name": "choice",
+        "message": "What action would you like to take?",
+        "choices": [
+            {
+                "key": "s",
+                "name": ACTION_SKIP
+            },
+            {
+                "key": "v",
+                "name": ACTION_VIEW
+            },
+            {
+                "key": "a",
+                "name": ACTION_ADD
+            }
+        ]
+    }
+    answers = PyInquirer.prompt((question,))
+    try:
+        choice = answers["choice"]
+    # answers == {} if canceled during prompt
+    except KeyError:
+        raise KeyboardInterrupt from None
+    return choice
+
+
+def _view_track(track: Track) -> None:
+    # todo: nasty global var solution lmao
+    def track_in_playlist(d: dict) -> bool:
+        items = d["tracks"]["items"]
+        return util.find(lambda i: i["track"]["id"] == track.track.id, items)
+
+    properties = {
+        "Title":
+            track.track.name,
+        "Artists":
+            ", ".join(a.name for a in track.track.artists),
+        "Added":
+            track.added_at.strftime("%Y-%b-%d %H:%M:%S"),
+        "Included in playlists":
+            "\n" + "\n".join(d["name"]
+                             for d in user_playlists if track_in_playlist(d))
+    }
+
+    for prop, val in properties.items():
+        prop = util.color(prop, "magenta")
+        print(f"{prop}: {val}")
+    print()
+
+
+def _add_to_playlist(spotify: tk.Spotify, track: Track) -> None:
+    pass
+
+
+def _execute_action(spotify: tk.Spotify, choice: str, track: Track) -> None:
+    if choice == ACTION_VIEW:
+        _view_track(track)
+        # don't continue stepping yet
+        # print()
+        # choice = _prompt_action()
+        # _execute_action(spotify, choice, track)
+    elif choice == ACTION_ADD:
+        _add_to_playlist(spotify, track)
 
 
 def step(spotify: tk.Spotify, playlist: list[str]) -> None:
@@ -109,18 +187,33 @@ def step(spotify: tk.Spotify, playlist: list[str]) -> None:
 
     if not using_liked:
         if not _confirm_playlist(playlist_name):
-            print(
-                f"{Fore.RED}Try running the command again with a more specific query.")
+            util.printred(
+                f"Try running the command again with a more specific query.")
             return
 
+    # temp fix: process user's saved playlists if first time
+    if len(user_playlists) == 0:
+        simple_pls = spotify.playlists(spotify.current_user().id)
+        simple_pls = spotify.all_items(simple_pls)
+        util.printred("Processing your playlists (this may take a while)...")
+        dict_pls = [spotify.playlist(pl.id, "name,tracks.items(track.id)")
+                    for pl in simple_pls]
+        user_playlists.extend(dict_pls)
+
+    # note: it seems httpx.RemoteProtocolError can be raised mid-iteration
     for num, track in enumerate(all_tracks, start=1):
         progress = f"{num}/{num_tracks}"
         name = track.track.name
         name = util.color(name, "blue")
         artists = ", ".join(artist.name for artist in track.track.artists)
         artists = util.color(artists, "cyan")
-        print(f"({progress}) {name} by {artists}")
-        action = input("> ")  # todo
+        print(f"\n({progress}) {name} by {artists}")
+        choice = _prompt_action()
+        _execute_action(spotify, choice, track)
+
+    # generator exhausted
+    print(
+        f"\nDone stepping through playlist {util.color(playlist_name, 'cyan')}!")
 
 
 ############################
