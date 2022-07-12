@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 
 CLI_PROMPT = f"{Fore.GREEN}(Spotify) {Fore.RESET}"
 EXIT_WORDS = ("q", "quit", "exit")
+HELP_MESSAGE = f"Spotify CLI! Use one of {EXIT_WORDS} or ^C to exit. Use 'list' to view list of commands."
 
 
 def import_credentials() -> None:
@@ -58,6 +59,12 @@ def register_commands() -> dict[str, Parser]:
     return commands
 
 
+def list_commands(commands: dict[str, Parser]) -> None:
+    unique_parsers = set(commands.values())
+    for parser in unique_parsers:
+        print(f"{parser.name:>10} | {parser.help}")
+
+
 def main_loop(spotify: tk.Spotify, commands: dict[str, Parser]) -> None:
     user = spotify.current_user()
     print(f"Welcome, {user.display_name}!")
@@ -68,9 +75,15 @@ def main_loop(spotify: tk.Spotify, commands: dict[str, Parser]) -> None:
                 continue
             name, *args = shlex.split(line)
             name = name.lower()
-            # check exit words before commands
+            # check help, list, and exit words before commands
             # this means any commands named/aliased with such words
             # will become masked in the main_loop
+            if name == "help":
+                print(HELP_MESSAGE)
+                continue
+            if name == "list":
+                list_commands(commands)
+                continue
             if name in EXIT_WORDS:
                 raise KeyboardInterrupt
             try:
@@ -79,7 +92,7 @@ def main_loop(spotify: tk.Spotify, commands: dict[str, Parser]) -> None:
             except KeyError:
                 print(f"{Fore.RED}Command {name!r} not found")
             print(f"{line=}")
-    # don't break loop
+    # todo: handle command-specific errors
     except Exception as e:
         print(f"{type(e).__name__}: {e}")
 
