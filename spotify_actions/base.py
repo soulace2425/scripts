@@ -40,7 +40,7 @@ class ParserBase(ArgumentParser):
         self._aliases = set() if aliases is None else set(aliases)
 
         # prepend help with line with line [name|alias1|alias2|...]
-        if len(aliases) > 0:
+        if len(self.aliases) > 0:
             self.aliases.discard(self.name)  # exclude from aliases
             aliases_str = "|" + "|".join(self.aliases)
         else:
