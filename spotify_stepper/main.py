@@ -7,13 +7,18 @@ main.py
 CLI for stepping through every song in Liked Songs.
 """
 
+import importlib
+import os
+import shlex
+from parser import Parser
+
 import colorama
 import tekore as tk
-from colorama import Fore
+from colorama import Back, Fore, Style
 from dotenv import load_dotenv
 
 CLI_PROMPT = f"{Fore.GREEN}(Spotify) {Fore.RESET}"
-EXIT_COMMANDS = ("q", "quit", "exit")
+EXIT_WORDS = ("q", "quit", "exit")
 
 
 def import_credentials() -> None:
@@ -34,31 +39,64 @@ def login_to_spotify() -> tk.Spotify:
     return tk.Spotify(token.access_token)
 
 
-def main_loop(spotify: tk.Spotify) -> None:
+def register_commands() -> dict[str, Parser]:
+    commands = {}
+    for file_name in os.listdir("commands/"):
+        if file_name.endswith(".py"):
+            module_name = file_name.removesuffix(".py")
+            import_path = f"commands.{module_name}"
+            module = importlib.import_module(import_path)
+            # every command implementation file should have a
+            # register_command function
+            try:
+                module.register_command(commands)
+            except AttributeError:
+                print(
+                    f"{Fore.RED}SETUP ERROR: implementation file {file_name!r} does not have a register_command function")
+                print(
+                    f"{Fore.RED}Skipping registration of any commands defined in {file_name}")
+    return commands
+
+
+def main_loop(spotify: tk.Spotify, commands: dict[str, Parser]) -> None:
+    user = spotify.current_user()
+    print(f"Welcome, {user.display_name}!")
     try:
-        colorama.init(autoreset=True)
         while True:
-            command = input(CLI_PROMPT)
-            if command == "" or command.isspace():
+            line = input(CLI_PROMPT)
+            if line == "" or line.isspace():
                 continue
-            if command.lower() in EXIT_COMMANDS:
+            name, *args = shlex.split(line)
+            name = name.lower()
+            # check exit words before commands
+            # this means any commands named/aliased with such words
+            # will become masked in the main_loop
+            if name in EXIT_WORDS:
                 raise KeyboardInterrupt
-            print(f"{command=}")
+            try:
+                command = commands[name]
+                command.run_command(spotify, args)
+            except KeyError:
+                print(f"{Fore.RED}Command {name!r} not found")
+            print(f"{line=}")
     # don't break loop
     except Exception as e:
         print(f"{type(e).__name__}: {e}")
-    # gracefully exit
-    except KeyboardInterrupt:
-        print(f"\n{Fore.RED}Aborted!")
-    finally:
-        colorama.deinit()
 
 
 def main() -> None:
     """Main driver function."""
+    colorama.init(autoreset=True)
     import_credentials()
     spotify = login_to_spotify()
-    main_loop(spotify)
+    commands = register_commands()
+    try:
+        main_loop(spotify, commands)
+    # gracefully exit
+    except KeyboardInterrupt:
+        print(f"{Fore.RED}Aborted!")
+    finally:
+        colorama.deinit()
 
 
 if __name__ == "__main__":
