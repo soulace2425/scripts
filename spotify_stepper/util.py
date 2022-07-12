@@ -16,19 +16,19 @@ def printred(message: str, intensity: int = 1) -> None:
         - 0 or lower: uncolored, unstyled text
         - 1: red text (+colorama.Fore.RED)
         - 2: emphasized red text (+colorama.Style.BRIGHT)
-        - 3 or higher: red background (+colorama.Back.RED)
+        - 3 or higher: red background (colorama.Back.RED)
 
     Args:
         message (str): Message to print.
         intensity (int, optional): Determines style of red to use (see above). Defaults to 1.
     """
     codes = ""
-    if intensity >= 1:
-        codes += Fore.RED
-    if intensity >= 2:
-        codes += Style.BRIGHT
-    if intensity >= 3:
-        codes += Back.RED
+    if intensity == 1:
+        codes = Fore.RED
+    elif intensity == 2:
+        codes = Fore.RED + Style.BRIGHT
+    elif intensity >= 3:
+        codes = Back.RED
     print(f"{codes}{message}")
 
 
