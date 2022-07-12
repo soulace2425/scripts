@@ -87,13 +87,13 @@ def main_loop(spotify: tk.Spotify, commands: dict[str, Parser]) -> None:
 def main() -> None:
     """Main driver function."""
     colorama.init(autoreset=True)
-    import_credentials()
-    spotify = login_to_spotify()
-    commands = register_commands()
     try:
+        import_credentials()
+        spotify = login_to_spotify()
+        commands = register_commands()
         main_loop(spotify, commands)
-    # gracefully exit
-    except KeyboardInterrupt:
+    # gracefully exit (catches KeyboardInterrupt)
+    except:
         print(f"{Fore.RED}Aborted!")
     finally:
         colorama.deinit()
