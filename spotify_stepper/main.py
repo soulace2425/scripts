@@ -18,9 +18,10 @@ import tekore as tk
 from colorama import Back, Fore, Style
 from dotenv import load_dotenv
 
+import util
 from exceptions import CommandError, CommandNotFound
 
-CLI_PROMPT = f"{Fore.GREEN}(Spotify) {Fore.RESET}"
+CLI_PROMPT = util.color("(Spotify) ", "green")
 EXIT_WORDS = ("q", "quit", "exit")
 CLEAR_WORDS = ("cls", "clear")
 HELP_MESSAGE = f"Spotify CLI! Use one of {EXIT_WORDS} or ^C to exit. Use 'list' to view list of commands."
@@ -56,10 +57,10 @@ def register_commands() -> dict[str, Parser]:
             try:
                 module.register_command(commands)
             except AttributeError:
-                print(
-                    f"{Fore.RED}SETUP ERROR: implementation file {file_name!r} does not have a register_command function")
-                print(
-                    f"{Fore.RED}Skipping registration of any commands defined in {file_name}")
+                util.printred(
+                    f"SETUP ERROR: implementation file {file_name!r} does not have a register_command function")
+                util.printred(
+                    f"Skipping registration of any commands defined in {file_name!r}")
     return commands
 
 
@@ -97,10 +98,11 @@ def main_loop(spotify: tk.Spotify, commands: dict[str, Parser]) -> None:
         if name in EXIT_WORDS:
             raise KeyboardInterrupt
         if name == "python":
-            print(f"{Fore.RED}Started a Python subprocess:")
+            util.printred(f"Started a Python subprocess:")
             py = subprocess.Popen("python -q")
             retcode = py.wait()
-            print(f"{Fore.RED}Python subprocess exited with code {hex(retcode)}.")
+            util.printred(
+                f"Python subprocess exited with code {hex(retcode)}.")
             continue
 
         # retrieve and run parser
@@ -109,16 +111,16 @@ def main_loop(spotify: tk.Spotify, commands: dict[str, Parser]) -> None:
             command.run_command(spotify, args)
         # command was NULL_PARSER
         except CommandNotFound:
-            print(f"{Fore.RED}Command {name!r} not found")
+            util.printred(f"Command {name!r} not found")
         # some expected error occurred
         except CommandError as e:
-            print(f"{Fore.RED}{e}")
+            util.printred(f"{e}")
         # some unexpected Python error occurred
         except Exception as e:
-            print(f"{Back.RED}An unexpected Python error occurred:")
-            print(f"{Fore.RED}{type(e).__name__}: {e}")
-            print(
-                f"{Fore.RED}{Style.BRIGHT}Aborting further action for command {name!r}, resuming program.")
+            util.printred(f"An unexpected Python error occurred:", 3)
+            util.printred(f"{type(e).__name__}: {e}")
+            util.printred(
+                f"Aborting further action for command {name!r}, resuming program.", 2)
 
         print(f"{line=}")  # debug
 
@@ -133,11 +135,11 @@ def main() -> None:
         main_loop(spotify, commands)
     # gracefully exit
     except KeyboardInterrupt:
-        print(f"{Fore.RED}Quitting program!")
+        util.printred(f"Quitting program!")
     except Exception as e:
-        print(f"{Back.RED}An unexpected Python error occurred:")
-        print(f"{Fore.RED}{type(e).__name__}: {e}")
-        print(f"{Fore.RED}{Style.BRIGHT}Aborting program.")
+        util.printred(f"An unexpected Python error occurred:", 3)
+        util.printred(f"{type(e).__name__}: {e}")
+        util.printred(f"Aborting program.", 2)
     finally:
         colorama.deinit()
 

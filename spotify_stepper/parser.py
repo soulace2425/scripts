@@ -10,6 +10,7 @@ from typing import Callable, Iterable, NoReturn, Optional, Sequence
 
 import tekore as tk
 
+import util
 from exceptions import CommandError, CommandNotFound
 
 
@@ -79,14 +80,20 @@ class Parser(ArgumentParser):
             args (Sequence[str]): Arguments from the command line. Excludes the command name.
 
         Returns:
-            bool: Whether parsing succeeded.
+            bool: Whether parsing and execution succeeded.
         """
         ns = self.parse_args(args)
         if ns is None:
             return False
 
         kwargs = ns.__dict__
-        self.func(spotify, **kwargs)
+        try:
+            self.func(spotify, **kwargs)
+        # intercept to not quit the entire program
+        # CommandErrors and Exceptions still propagated up
+        except KeyboardInterrupt:
+            util.printred("Aborted command")
+            return False
         return True
 
     def parse_args(self, args: Sequence[str]) -> Optional[Namespace]:
